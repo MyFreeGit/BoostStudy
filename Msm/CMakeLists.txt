@@ -4,5 +4,7 @@ project(BoostStudyMsm VERSION 0.1.0)
 enable_testing()
 
 add_subdirectory(FirstStep)
+add_subdirectory(Basic)
+
 find_package(spdlog)
 add_executable(Sample SampleCode.cpp)
