@@ -3,6 +3,9 @@ project(BoostStudyMsm VERSION 0.1.0)
 
 enable_testing()
 
+add_subdirectory(TracerLib)
+include_directories(./TracerLib)
+
 find_package(Boost REQUIRED)
 include_directories(${Boost_INCLUDE_DIR})
 link_directories(${Boost_LIBRARY_DIR})
@@ -15,6 +18,6 @@ foreach(cpp_file IN LISTS CPP_SRC)
     get_filename_component(pure_filename ${cpp_file} NAME_WLE)
     message("add exmaple executable ${pure_filename} with source file ${cpp_file}")
     add_executable(${pure_filename} ${cpp_file})
-    target_link_libraries(${pure_filename} ${GTEST_BOTH_LIBRARIES} gmock)
+    target_link_libraries(${pure_filename} ${GTEST_BOTH_LIBRARIES} gmock TracerLib)
     GTEST_ADD_TESTS(${pure_filename} "" ${cpp_file})
 endforeach()
