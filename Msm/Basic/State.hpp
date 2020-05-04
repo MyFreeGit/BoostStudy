@@ -5,8 +5,8 @@ namespace msm = boost::msm;
 
 namespace State
 {
-constexpr auto init_state_on_entry = "init_state_on_entry()";
-constexpr auto init_state_on_exit = "init_state_on_exit()";
+constexpr auto init_state_on_entry = "init_state_on_entry";
+constexpr auto init_state_on_exit = "init_state_on_exit";
 // States with entries
 struct InitState : public msm::front::state<>
 {

@@ -3,6 +3,7 @@
 #include "State.hpp"
 #include "Event.hpp"
 #include "Action.hpp"
+#include "Guard.hpp"
 #include <memory>
 #include <boost/msm/back/state_machine.hpp>
 #include <boost/msm/front/state_machine_def.hpp>
@@ -13,26 +14,19 @@ namespace
 namespace msm = boost::msm;
 using msm::front::Row;
 
-class MsmActionTest : public ::testing::Test
+class MsmGuardTest : public ::testing::Test
 {
 public:
     struct StateMachine_ : public msm::front::state_machine_def<StateMachine_>
     {
-        // Action
-        void handle_loopback(const Event::Loopback&)
-        {
-            TRACE_FUNCTION_CALL("handle_loopback");
-        }
-
         // Set initial state
         typedef State::InitState initial_state;
         // Transition table
         struct transition_table : public boost::mpl::vector<
             // Use _row to simplify the code, _row allows omitting action and guard
-            //   |Start            |Event           |Next              |Action
-            a_row<State::InitState, Event::Loopback, State::InitState,  &StateMachine_::handle_loopback>, // Use a_row to allow function pointer as action handler
-            Row  <State::InitState, Event::Stop,     State::EndState,   Action::OnEventStop>, // EventStop triggers the state transition
-            Row  <State::InitState, Event::Inner,    msm::front::none,  Action::OnEventInner>
+            //|Start             |Event            |Next             |Action             |Guard
+            Row<State::InitState, Event::Loopback,  State::InitState, msm::front::none>, 
+            Row<State::InitState, Event::Stop,      State::EndState,  Action::OnEventStop, Guard::EventStopGuard>
         >{};
     };
 
@@ -46,51 +40,37 @@ protected:
     }
 };
 
-TEST_F(MsmActionTest, StateTransitWithFunctionEventHandler)
+TEST_F(MsmGuardTest, GuardReturnTrue)
 {
     {
         ::testing::InSequence s;
         auto& mock = Tracer::TracerProvider::getMocker();
         EXPECT_CALL(mock, trace(State::init_state_on_entry));
-        EXPECT_CALL(mock, trace(State::init_state_on_exit)); // on_exit() is called before handling the event message.
-        EXPECT_CALL(mock, trace("handle_loopback"));
-        EXPECT_CALL(mock, trace(State::init_state_on_entry));
-    }
-    StateMachine sut{};
-    sut.start();
-    EXPECT_EQ(*sut.current_state(), 0);
-    sut.process_event(Event::Loopback());
-    EXPECT_EQ(*sut.current_state(), 0);
-}
-
-TEST_F(MsmActionTest, StateTransitWithFunctorHandler)
-{
-    {
-        ::testing::InSequence s;
-        auto& mock = Tracer::TracerProvider::getMocker();
-        EXPECT_CALL(mock, trace(State::init_state_on_entry));
-        EXPECT_CALL(mock, trace(State::init_state_on_exit)); // on_exit() is called before handling the event message.
+        EXPECT_CALL(mock, trace(Guard::event_stop_guard));
+        // Guard Check passed, call state exit and action handling correspondingly
+        EXPECT_CALL(mock, trace(State::init_state_on_exit)); 
         EXPECT_CALL(mock, trace(Action::on_event_stop));
     }
     StateMachine sut{};
     sut.start();
     EXPECT_EQ(*sut.current_state(), 0);
-    sut.process_event(Event::Stop());
+    sut.process_event(Event::Stop(true));
     EXPECT_EQ(*sut.current_state(), 1);
 }
 
-TEST_F(MsmActionTest, InnerStateTransitWithFunctorHandler)
+TEST_F(MsmGuardTest, GuardReturnFalse)
 {
     {
         ::testing::InSequence s;
         auto& mock = Tracer::TracerProvider::getMocker();
         EXPECT_CALL(mock, trace(State::init_state_on_entry));
-        EXPECT_CALL(mock, trace(Action::on_event_inner));
+        EXPECT_CALL(mock, trace(Guard::event_stop_guard));
+        // Guard Check fails, nothing happened.
     }
     StateMachine sut{};
     sut.start();
     EXPECT_EQ(*sut.current_state(), 0);
-    sut.process_event(Event::Inner());
+    sut.process_event(Event::Stop(false));
     EXPECT_EQ(*sut.current_state(), 0);
 }
 }
