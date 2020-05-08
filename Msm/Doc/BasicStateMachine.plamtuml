@@ -1,0 +1,7 @@
+@startuml
+[*] --> InitState
+InitState --> [*] : EventStop [EventStopGuard] / OnEventStop
+InitState --> InitState : EventLoopback
+InitState : entry / on_entry
+InitState : exit / on_exit
+@enduml
