@@ -15,6 +15,28 @@ MSM stand for Meta State Machine
 
 ---
 
+# Functor
+
+- 重载了（）operator的Class或struct
+- Fuctor主要用于代替C语言中的回调函数
+    - 更易于从用
+    - 每个Functor实例可以有自己的状态
+    - 更易于编译器优化代码可执行速度（可将Functor优化成inline函数）
+- Boost::MSM 推荐使用Functor用于定义Guard和Action
+```C++
+class ShorterThan {
+    public:
+        explicit ShorterThan(int maxLength) : length(maxLength) {}
+        bool operator() (const string& str) const {
+            return str.length() < length;
+        }
+    private:
+        const int length;
+};
+ShorterThan shorterThan5{5}, shorterThan9{9};
+```
+---
+
 # 状态机
 - A state machine is a concrete model describing the behavior of a system. It is composed of a finite number of states and transitions.
 - Boost MSM状态机的实现主要基于UML的状态机的定义
@@ -136,3 +158,95 @@ struct transition_table : public boost::mpl::vector<
     // Row<State::InitState, Event::Stop, State::EndState, Action::OnEventStop>
 >{};
 ```
+
+---
+
+# Boost MSM Guard
+```C++
+struct GeneralGuard
+{
+    // Operator() with four parameters
+    template <class Event, class Fsm, class SourceState, class TargetState>
+    bool operator()(Event const &e, Fsm &, SourceState &, TargetState &)
+    {
+    }
+    // 根据C++ Template的特性，也可以定义（）operator的specialized版本
+    template <class Fsm, class SourceState, class TargetState>
+    bool operator()(Event::Stop const &e, Fsm &, SourceState &, TargetState &)
+    {
+        return e.readyToStop;
+    }
+};
+```
+
+---
+
+# Boost MSM Action
+```C++
+struct Action
+{
+    // Parameter is same as Guard, but without return value
+    template <class Event, class Fsm, class SourceState, class TargetState>
+    void operator()(Event const &, Fsm &fsm, SourceState &, TargetState &) const
+    {
+    }
+};
+```
+
+---
+
+# Boost MSM StateMachine
+
+```C++
+struct StateMachine_ : public msm::front::state_machine_def<StateMachine_>
+{
+    // 当调用状态机对象的start()函数启动状态机时被调用
+    template <class Event, class Fsm>
+    void on_entry(Event const&, Fsm&) const
+    {}
+    // 当调用状态机对象的stop()函数停止状态机时被调用
+    template <class Event, class Fsm>
+    void on_exit(Event const&, Fsm&) const
+    {}
+    // Set initial state
+    typedef State::InitState initial_state;
+    // Transition table
+    struct transition_table : public boost::mpl::vector<
+        Row  <State::InitState, Event::Stop,     State::EndState,   Action::OnEventStop>
+    >{};
+};
+// Pick a back-end 目前MSM的backend只有一种
+typedef msm::back::state_machine<StateMachine_> StateMachine;
+``` 
+
+---
+
+# Boost MSM 基本操作
+
+```C++
+typedef msm::back::state_machine<StateMachine_> StateMachine;
+StateMachine machine;
+
+machine.start(); // 启动状态机。 还有一重载版本start(event);
+machine.process_event(KeyPressed{60});
+machine.current_state(); // 得到当前状态值，注返回值为int*类型，为一组当前所处的类型（有子状态）。
+                         // 状态值有Transition Table中State由上至下的顺序决定其值。
+machine.stop(); // 停止状态机。 还有一重载版本stop(event)
+```
+
+---
+![bg auto right:35%](./ConflictTransit.png)
+# Conflict Transit
+- 当响应同一消息时，根据不同条件进行不同处理
+```C++
+// Transition table
+struct transition_table : public boost::mpl::vector<
+    Row<InitState, Event, NextState,    Action1, Condition1>,
+    Row<InitState, Event, AnotherState, Action2, Condition2>
+>{};
+```
+注意：Boost MSM匹配transition的顺序是由下向上的。上例的匹配顺序为：
+- 先运行Condition2，如满足，运行Action2，状态迁移到AnotherState
+- 如Condition2验证失败，运行Condition1，如满足，运行Action1，状态迁移到NextState
+- 如Condition1验证失败，则不发生状态迁移
+

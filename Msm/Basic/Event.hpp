@@ -11,4 +11,5 @@ struct Stop {
 }; // Trigger the state to EndState
 struct Loopback {}; // Not trigger state transition
 struct Inner {}; // State Inner message.
+struct Event {};
 }

@@ -1,0 +1,7 @@
+@startuml
+[*] --> InitState
+InitState --> NextState : Event [Condition1] / Action1
+InitState --> AnotherState : Event [Condition2] / Action2
+NextState --> [*] : Stop
+AnotherState --> [*] : Stop
+@enduml
