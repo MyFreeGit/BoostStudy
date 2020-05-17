@@ -150,14 +150,17 @@ using msm::front::Row;
 
 // Transition table
 struct transition_table : public boost::mpl::vector<
-    // |Start State      |Event       |Next State      |Action              |Guard
-    Row<State::InitState, Event::Stop, State::EndState, Action::OnEventStop, Guard::EventStopGuard>
+    // |Start State      |Event        |Next State       |Action              |Guard
+    Row<State::InitState, Event::Event, State::NextState>
+    Row<State::NextState, Event::Stop,  State::EndState, Action::OnEventStop, Guard::EventStopGuard>
+
     // Row的参数个数可以是3，即Action和Guard为none如：
-    // Row<State::InitState, Event::Stop, State::EndState>
+    // Row<State::InitState, Event::Event, State::NextState>
     // Row的参数个数也可以是4，即Guard为none
     // Row<State::InitState, Event::Stop, State::EndState, Action::OnEventStop>
 >{};
 ```
+- 通过transition table，可以确定State的Id（即current_state()返回的值），其确定的方法是:先从Start State这一列开始由上往下（由0开始）为每一个State标index（InitState为0， NextState为1），当遍历完Start State后。同样规则遍历Next State这一列（EndState为2）
 
 ---
 
@@ -236,7 +239,7 @@ machine.stop(); // 停止状态机。 还有一重载版本stop(event)
 
 ---
 ![bg auto right:35%](./ConflictTransit.png)
-# Conflict Transit
+# Conflict Transition
 - 当响应同一消息时，根据不同条件进行不同处理
 ```C++
 // Transition table
@@ -250,3 +253,76 @@ struct transition_table : public boost::mpl::vector<
 - 如Condition2验证失败，运行Condition1，如满足，运行Action1，状态迁移到NextState
 - 如Condition1验证失败，则不发生状态迁移
 
+---
+
+# Anonymous Transitions
+- 在没有事件触发的情况下，当一个State完成后自动迁移到下一状态。
+    - 状态机启动后进入初始状态
+    - 等于UML中的状态图降级为活动图
+    - 可以通过设置Guard，实现条件判断
+- 在上例中将触发消息用boost::msm::front::none替代，就将普通State Transit转化为Anonymous Transit
+```C++
+struct transition_table : public boost::mpl::vector<
+    Row<InitState, msm::front::none, NextState,     Action1, Condition1>, 
+    Row<InitState, msm::front::none, AnotherState,  Action2, Condition2>
+>{};
+```
+- 上述Transit Table中的Action和Guard也可删除或为none。则状态自动迁移，匹配规则同样自下而上。
+
+---
+
+![bg auto right:30%](./Submachine.png)
+# Submachine
+```C++
+struct StateMachine_ : public msm::front::state_machine_def<StateMachine_>
+{
+    // Define SubMachine
+    struct SubMachine_ : public msm::front::state_machine_def<SubMachine_>
+    {
+        typedef State::AnotherState initial_state;
+        struct transition_table : public boost::mpl::vector<
+            Row<State::AnotherState, Event::Inner, State::NextState>,
+            Row<State::NextState,    Event::Stop,  State::EndState>
+        >{};
+    };
+    typedef msm::back::state_machine<SubMachine_> SubMachine;
+    typedef State::InitState initial_state;
+    struct transition_table : public boost::mpl::vector<
+        Row<State::InitState, Event::Event, SubMachine>
+    >{};
+};
+typedef msm::back::state_machine<StateMachine_> StateMachine;
+```
+Submachine直接定义在State Machine内，Boost MSM会自动将消息派送到Submachine内。
+```C++
+StateMachine sut;
+sut.start();
+sut.process_event(Event::Event{}); sut.process_event(Event::Inner{});
+```
+
+---
+
+# Defer Event
+```C++
+struct StateMachine_ : public msm::front::state_machine_def<StateMachine_>
+{
+    // Make the Current StateMachine support Defer Message
+    typedef int activate_deferred_events;
+    typedef State::InitState initial_state;
+    // Transition table
+    struct transition_table : public boost::mpl::vector<
+        //|Start             |Event        |Next             |Action            |Guard
+        Row<State::InitState, Event::Event, State::NextState, Action::Action1,   Guard::Condition1>,
+        Row<State::InitState, Event::Stop,  msm::front::none, msm::front::Defer, Guard::Condition1>, 
+        Row<State::NextState, Event::Stop,  State::EndState,  Action::Action2,   Guard::Condition2>
+    >{};
+};
+// Pick a back-end
+typedef msm::back::state_machine<StateMachine_> StateMachine;
+
+StateMachine sut{};
+sut.start();
+sut.process_event(Event::Stop{}); // Event is deferred at first
+sut.process_event(Event::Event{}); 
+```
+通过Guard可以决定，是否在当前状态保存收到的Event

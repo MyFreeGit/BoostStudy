@@ -3,8 +3,11 @@
 #include "Event.hpp"
 namespace Guard
 {
-auto constexpr event_stop_guard = "event_stop_guard";
-auto constexpr event_stop_general_guard = "event_stop_general_guard";
+constexpr auto event_stop_guard = "event_stop_guard";
+constexpr auto event_stop_general_guard = "event_stop_general_guard";
+constexpr auto condition1 = "condition1";
+constexpr auto condition2 = "condition2";
+
 struct EventStopGuard
 {
     // General Operator
@@ -22,6 +25,26 @@ struct EventStopGuard
     {
         TRACE_FUNCTION_CALL(event_stop_guard);
         return e.readyToStop;
+    }
+};
+
+struct Condition1
+{
+    template <class Event, class Fsm, class SourceState, class TargetState>
+    bool operator()(Event const &, Fsm &fsm, SourceState &, TargetState &) const
+    {
+        TRACE_FUNCTION_CALL(condition1);
+        return fsm.condition1;
+    }
+};
+
+struct Condition2
+{
+    template <class Event, class Fsm, class SourceState, class TargetState>
+    bool operator()(Event const &, Fsm &fsm, SourceState &, TargetState &) const
+    {
+        TRACE_FUNCTION_CALL(condition2);
+        return fsm.condition2;
     }
 };
 } // namespace Guard

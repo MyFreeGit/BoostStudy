@@ -1,0 +1,9 @@
+@startuml
+[*] --> InitState
+InitState --> SubMachine : Event
+State SubMachine {
+    [*] --> AnotherState
+    AnotherState --> NextState : Inner
+}
+SubMachine --> [*] : Stop
+@enduml
