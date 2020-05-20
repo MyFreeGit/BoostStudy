@@ -23,7 +23,6 @@ public:
         typedef State::InitState initial_state;
         // Transition table
         struct transition_table : public boost::mpl::vector<
-            // Use _row to simplify the code, _row allows omitting action and guard
             //|Start             |Event            |Next             |Action             |Guard
             Row<State::InitState, Event::Loopback,  State::InitState, msm::front::none>, 
             Row<State::InitState, Event::Stop,      State::EndState,  Action::OnEventStop, Guard::EventStopGuard>

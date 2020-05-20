@@ -23,7 +23,6 @@ public:
         typedef State::InitState initial_state;
         // Transition table
         struct transition_table : public boost::mpl::vector<
-            // Use _row to simplify the code, _row allows omitting action and guard
             //|Start             |Event            |Next                 |Action          |Guard
             Row<State::InitState, Event::Event,     State::NextState,     Action::Action1, Guard::Condition1>, 
             Row<State::InitState, Event::Event,     State::AnotherState,  Action::Action2, Guard::Condition2>
@@ -97,8 +96,7 @@ struct IfElseStateMachine_ : public msm::front::state_machine_def<IfElseStateMac
     typedef State::InitState initial_state;
     // Transition table
     struct transition_table : public boost::mpl::vector<
-        // Use _row to simplify the code, _row allows omitting action and guard
-        //|Start             |Event            |Next                 |Action          |Guard
+         //|Start             |Event            |Next                 |Action          |Guard
         Row<State::InitState, Event::Event,     State::NextState,     Action::Action1, msm::front::none>,
         Row<State::InitState, Event::Event,     State::AnotherState,  Action::Action2, Guard::Condition2>
     >{};

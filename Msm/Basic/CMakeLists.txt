@@ -5,6 +5,7 @@ enable_testing()
 
 add_subdirectory(TracerLib)
 include_directories(./TracerLib)
+include_directories(./Includes)
 
 find_package(Boost REQUIRED)
 include_directories(${Boost_INCLUDE_DIR})

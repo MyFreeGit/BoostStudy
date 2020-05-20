@@ -11,7 +11,7 @@ MSM stand for Meta State Machine
 # Basic Idea
 - 使用GMock GTest框架，通过UT方式展现Boost MSM的功能
 - 案例主要基于此状态机：
-![](./BasicStateMachine.png)
+![](./Images/BasicStateMachine.png)
 
 ---
 
@@ -238,7 +238,7 @@ machine.stop(); // 停止状态机。 还有一重载版本stop(event)
 ```
 
 ---
-![bg auto right:35%](./ConflictTransit.png)
+![bg auto right:35%](./Images/ConflictTransit.png)
 # Conflict Transition
 - 当响应同一消息时，根据不同条件进行不同处理
 ```C++
@@ -271,7 +271,7 @@ struct transition_table : public boost::mpl::vector<
 
 ---
 
-![bg auto right:30%](./Submachine.png)
+![bg auto right:30%](./Images/Submachine.png)
 # Submachine
 ```C++
 struct StateMachine_ : public msm::front::state_machine_def<StateMachine_>
@@ -302,6 +302,30 @@ sut.process_event(Event::Event{}); sut.process_event(Event::Inner{});
 
 ---
 
+![bg auto right:30%](./Images/OrthogonalRegion.png)
+# Orthogonal Region
+
+- 有时我们需要定义在一个状态机里面定义两个正交的子状态机。比如一个子状态机专门用于处理业务，而另一个状态机专门维护当前的状态。
+```C++
+struct StateMachine_ : public msm::front::state_machine_def<StateMachine_>
+{
+    // Set initial state and define two Orthogonal region
+    typedef boost::mpl::vector<State::InitState, State::WorkingState> initial_state;
+    // Transition table
+    struct transition_table : public boost::mpl::vector<
+        //|Start                |Event           |Next
+        Row<State::InitState,    Event::Event,    State::NextState>,
+        Row<State::NextState,    Event::Stop,     State::EndState>,
+        Row<State::WorkingState, Event::HandOver, State::SpareState>,
+        Row<State::SpareState,   Event::HandOver, State::WorkingState>
+    >{};
+};
+```
+- 注意两个子状态不要有公共的消息，不然位于前面的Transition会被后面的Transition掩盖掉。
+- 定义有几个Region，由typedef boost::mpl::vector<...> initial_state;模板中的初始状态个数决定
+
+---
+
 # Defer Event
 ```C++
 struct StateMachine_ : public msm::front::state_machine_def<StateMachine_>
@@ -325,4 +349,4 @@ sut.start();
 sut.process_event(Event::Stop{}); // Event is deferred at first
 sut.process_event(Event::Event{}); 
 ```
-通过Guard可以决定，是否在当前状态保存收到的Event
+通过Guard可以决定，是否在当前状态下保存收到的Event

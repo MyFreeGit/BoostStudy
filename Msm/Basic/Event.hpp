@@ -12,4 +12,5 @@ struct Stop {
 struct Loopback {}; // Not trigger state transition
 struct Inner {}; // State Inner message.
 struct Event {};
+struct HandOver {};
 }

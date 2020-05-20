@@ -1,0 +1,11 @@
+@startuml
+state Orthogonal {
+[*] -> InitState
+InitState --> NextState : Event
+NextState --> [*] : Stop
+--
+[*] -> WorkingState
+WorkingState --> SpareState : HandOver
+SpareState --> WorkingState : HandOver
+}
+@enduml

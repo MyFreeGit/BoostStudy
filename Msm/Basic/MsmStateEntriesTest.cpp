@@ -37,7 +37,6 @@ public:
         // Transition table
         struct transition_table
             : public boost::mpl::vector<
-                  // Use _row to simplify the code, _row allows omitting action and guard
                   // |Start            |Event           |Next
                   Row<State::InitState, Event::Stop,     State::EndState>,  // EventStop Trigger the state is transitted to EndState
                   Row<State::InitState, Event::Loopback, State::InitState>, // Event will not trigger the state transition
@@ -68,7 +67,7 @@ TEST_F(MsmStateEntriesTest, StateTransit)
         EXPECT_CALL(mock, trace("state_machine_on_entry"));
         EXPECT_CALL(mock, trace(State::init_state_on_entry));
         EXPECT_CALL(mock, trace(State::init_state_on_exit));
-        EXPECT_CALL(mock, trace("state_machine_on_exit")); // Stop the StateMachine will trigger the StaetMachine's on_exit.
+        EXPECT_CALL(mock, trace("state_machine_on_exit")); // Stop the StateMachine will trigger the StateMachine's on_exit.
     }
     StateMachine sut{};
     sut.start();
