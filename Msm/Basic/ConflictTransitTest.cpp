@@ -44,7 +44,7 @@ TEST_F(ConflictTransitTest, Condition2ReturnTrue)
 {
     {
         ::testing::InSequence s;
-        auto& mock = Tracer::TracerProvider::getMocker();
+        auto& mock = Tracer::getMocker();
         EXPECT_CALL(mock, trace(State::init_state_on_entry));
         // Guard::Condition2 is select first
         EXPECT_CALL(mock, trace(Guard::condition2));
@@ -59,16 +59,16 @@ TEST_F(ConflictTransitTest, Condition2ReturnTrue)
     StateMachine sut{};
     sut.start();
     sut.condition2 = true;
-    EXPECT_EQ(*sut.current_state(), 0);
+    EXPECT_EQ(sut.current_state()[0], 0);
     sut.process_event(Event::Event{});
-    EXPECT_EQ(*sut.current_state(), 2);
+    EXPECT_EQ(sut.current_state()[0], 2);
 }
 
 TEST_F(ConflictTransitTest, Condition2ReturnFalse)
 {
     {
         ::testing::InSequence s;
-        auto& mock = Tracer::TracerProvider::getMocker();
+        auto& mock = Tracer::getMocker();
         EXPECT_CALL(mock, trace(State::init_state_on_entry));
         // Guard::Condition2 is selected first
         EXPECT_CALL(mock, trace(Guard::condition2));
@@ -85,9 +85,9 @@ TEST_F(ConflictTransitTest, Condition2ReturnFalse)
     StateMachine sut{};
     sut.start();
     sut.condition2 = false;
-    EXPECT_EQ(*sut.current_state(), 0);
+    EXPECT_EQ(sut.current_state()[0], 0);
     sut.process_event(Event::Event{});
-    EXPECT_EQ(*sut.current_state(), 1);
+    EXPECT_EQ(sut.current_state()[0], 1);
 }
 
 struct IfElseStateMachine_ : public msm::front::state_machine_def<IfElseStateMachine_>
@@ -110,7 +110,7 @@ TEST_F(ConflictTransitTest, IfElseWhenConditionIsTrue)
 {
     {
         ::testing::InSequence s;
-        auto& mock = Tracer::TracerProvider::getMocker();
+        auto& mock = Tracer::getMocker();
         EXPECT_CALL(mock, trace(State::init_state_on_entry));
         // Guard::Condition2 is selected first
         EXPECT_CALL(mock, trace(Guard::condition2));
@@ -125,16 +125,16 @@ TEST_F(ConflictTransitTest, IfElseWhenConditionIsTrue)
     IfElseStateMachine sut{};
     sut.start();
     sut.condition2 = true;
-    EXPECT_EQ(*sut.current_state(), 0);
+    EXPECT_EQ(sut.current_state()[0], 0);
     sut.process_event(Event::Event{});
-    EXPECT_EQ(*sut.current_state(), 2);
+    EXPECT_EQ(sut.current_state()[0], 2);
 }
 
 TEST_F(ConflictTransitTest, IfElseWhenConditionIsFalse)
 {
     {
         ::testing::InSequence s;
-        auto& mock = Tracer::TracerProvider::getMocker();
+        auto& mock = Tracer::getMocker();
         EXPECT_CALL(mock, trace(State::init_state_on_entry));
         // Guard::Condition2 is selected first
         EXPECT_CALL(mock, trace(Guard::condition2));
@@ -150,8 +150,8 @@ TEST_F(ConflictTransitTest, IfElseWhenConditionIsFalse)
     IfElseStateMachine sut{};
     sut.start();
     sut.condition2 = false;
-    EXPECT_EQ(*sut.current_state(), 0);
+    EXPECT_EQ(sut.current_state()[0], 0);
     sut.process_event(Event::Event{});
-    EXPECT_EQ(*sut.current_state(), 1);
+    EXPECT_EQ(sut.current_state()[0], 1);
 }
 }

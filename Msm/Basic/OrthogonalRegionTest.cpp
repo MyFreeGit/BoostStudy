@@ -45,7 +45,7 @@ TEST_F(OrthogonalRegionTest, NormalTest)
 {
     {
         ::testing::InSequence s;
-        auto& mock = Tracer::TracerProvider::getMocker();
+        auto& mock = Tracer::getMocker();
         EXPECT_CALL(mock, trace(State::init_state_on_entry));
         EXPECT_CALL(mock, trace(State::working_state_on_entry));
 
@@ -70,7 +70,7 @@ TEST_F(OrthogonalRegionTest, OneRegionReachEndState)
 {
     {
         ::testing::InSequence s;
-        auto& mock = Tracer::TracerProvider::getMocker();
+        auto& mock = Tracer::getMocker();
         EXPECT_CALL(mock, trace(State::init_state_on_entry));
         EXPECT_CALL(mock, trace(State::working_state_on_entry));
 

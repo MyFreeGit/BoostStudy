@@ -1,0 +1,7 @@
+@startuml
+state SimpleState{
+SimpleState : entry / on_entry
+SimpleState : exit / on_exit
+@enduml
+}
+@enduml

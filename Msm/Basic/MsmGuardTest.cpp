@@ -43,7 +43,7 @@ TEST_F(MsmGuardTest, GuardReturnTrue)
 {
     {
         ::testing::InSequence s;
-        auto& mock = Tracer::TracerProvider::getMocker();
+        auto& mock = Tracer::getMocker();
         EXPECT_CALL(mock, trace(State::init_state_on_entry));
         EXPECT_CALL(mock, trace(Guard::event_stop_guard));
         // Guard Check passed, call state exit and action handling correspondingly
@@ -52,24 +52,24 @@ TEST_F(MsmGuardTest, GuardReturnTrue)
     }
     StateMachine sut{};
     sut.start();
-    EXPECT_EQ(*sut.current_state(), 0);
+    EXPECT_EQ(sut.current_state()[0], 0);
     sut.process_event(Event::Stop(true));
-    EXPECT_EQ(*sut.current_state(), 1);
+    EXPECT_EQ(sut.current_state()[0], 1);
 }
 
 TEST_F(MsmGuardTest, GuardReturnFalse)
 {
     {
         ::testing::InSequence s;
-        auto& mock = Tracer::TracerProvider::getMocker();
+        auto& mock = Tracer::getMocker();
         EXPECT_CALL(mock, trace(State::init_state_on_entry));
         EXPECT_CALL(mock, trace(Guard::event_stop_guard));
         // Guard Check fails, nothing happened.
     }
     StateMachine sut{};
     sut.start();
-    EXPECT_EQ(*sut.current_state(), 0);
+    EXPECT_EQ(sut.current_state()[0], 0);
     sut.process_event(Event::Stop(false));
-    EXPECT_EQ(*sut.current_state(), 0);
+    EXPECT_EQ(sut.current_state()[0], 0);
 }
 }

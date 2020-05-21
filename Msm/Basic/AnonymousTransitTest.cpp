@@ -45,7 +45,7 @@ TEST_F(AnonymousTransitTest, Condition2ReturnTrue)
 {
     {
         ::testing::InSequence s;
-        auto& mock = Tracer::TracerProvider::getMocker();
+        auto& mock = Tracer::getMocker();
         EXPECT_CALL(mock, trace(State::init_state_on_entry));
         // Guard::Condition2 is select first
         EXPECT_CALL(mock, trace(Guard::condition2));
@@ -60,14 +60,14 @@ TEST_F(AnonymousTransitTest, Condition2ReturnTrue)
     StateMachine sut{};
     sut.condition2 = true;
     sut.start();
-    EXPECT_EQ(*sut.current_state(), 2);
+    EXPECT_EQ(sut.current_state()[0], 2);
 }
 
 TEST_F(AnonymousTransitTest, Condition2ReturnFalse)
 {
     {
         ::testing::InSequence s;
-        auto& mock = Tracer::TracerProvider::getMocker();
+        auto& mock = Tracer::getMocker();
         EXPECT_CALL(mock, trace(State::init_state_on_entry));
         // Guard::Condition2 is selected first
         EXPECT_CALL(mock, trace(Guard::condition2));
@@ -84,14 +84,14 @@ TEST_F(AnonymousTransitTest, Condition2ReturnFalse)
     StateMachine sut{};
     sut.condition2 = false;
     sut.start();
-    EXPECT_EQ(*sut.current_state(), 1);
+    EXPECT_EQ(sut.current_state()[0], 1);
 }
 
 TEST_F(AnonymousTransitTest, BothConditionReturnFalse)
 {
     {
         ::testing::InSequence s;
-        auto& mock = Tracer::TracerProvider::getMocker();
+        auto& mock = Tracer::getMocker();
         EXPECT_CALL(mock, trace(State::init_state_on_entry));
         // Guard::Condition2 is selected first
         EXPECT_CALL(mock, trace(Guard::condition2));
@@ -103,7 +103,7 @@ TEST_F(AnonymousTransitTest, BothConditionReturnFalse)
     sut.condition1 = false;
     sut.condition2 = false;
     sut.start();
-    EXPECT_EQ(*sut.current_state(), 0);
+    EXPECT_EQ(sut.current_state()[0], 0);
 }
 
 struct StateMachineWithoutActionAndGuard_ : public msm::front::state_machine_def<StateMachineWithoutActionAndGuard_>
@@ -114,7 +114,8 @@ struct StateMachineWithoutActionAndGuard_ : public msm::front::state_machine_def
     struct transition_table : public boost::mpl::vector<
         //|Start             |Event            |Next
         Row<State::InitState, msm::front::none, State::NextState>, // This transit will never be happened. Only for demonstration.
-        Row<State::InitState, msm::front::none, State::AnotherState>
+        Row<State::InitState, msm::front::none, State::AnotherState>,
+        Row<State::InitState, Event::Event,     State::EndState>  // This transit is over written by Anonymous Transit
     >{};
 };
 // Pick a back-end
@@ -124,7 +125,7 @@ TEST_F(AnonymousTransitTest, StateMachineWithoutActionAndGuard)
 {
     {
         ::testing::InSequence s;
-        auto& mock = Tracer::TracerProvider::getMocker();
+        auto& mock = Tracer::getMocker();
         EXPECT_CALL(mock, trace(State::init_state_on_entry));
         EXPECT_CALL(mock, trace(State::init_state_on_exit));
         // State is transit to AnotherState
@@ -132,6 +133,6 @@ TEST_F(AnonymousTransitTest, StateMachineWithoutActionAndGuard)
     }
     StateMachineWithoutActionAndGuard sut{};
     sut.start();
-    EXPECT_EQ(*sut.current_state(), 2);
+    EXPECT_EQ(sut.current_state()[0], 2);
 }
 }

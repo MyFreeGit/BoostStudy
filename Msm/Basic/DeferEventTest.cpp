@@ -25,10 +25,11 @@ public:
         typedef State::InitState initial_state;
         // Transition table
         struct transition_table : public boost::mpl::vector<
-            //|Start             |Event        |Next             |Action            |Guard
-            Row<State::InitState, Event::Event, State::NextState, Action::Action1,   Guard::Condition1>,
-            Row<State::InitState, Event::Stop,  msm::front::none, msm::front::Defer, Guard::Condition1>, 
-            Row<State::NextState, Event::Stop,  State::EndState,  Action::Action2,   Guard::Condition2>
+            //|Start                |Event            |Next                |Action            |Guard
+            Row<State::InitState,    Event::Event,     State::WorkingState, Action::Action1,   Guard::Condition1>,
+            Row<State::InitState,    Event::HandOver,  msm::front::none,    msm::front::Defer, Guard::Condition2>, 
+            Row<State::WorkingState, Event::HandOver,  State::SpareState>,
+            Row<State::SpareState,   Event::HandOver,  State::WorkingState>
         >{};
         // Control the return value of the Condition1 and Condition2
         bool condition1{true}, condition2{true};
@@ -47,27 +48,54 @@ TEST_F(DeferEventTest, Condition2ReturnTrue)
 {
     {
         ::testing::InSequence s;
-        auto& mock = Tracer::TracerProvider::getMocker();
+        auto& mock = Tracer::getMocker();
         EXPECT_CALL(mock, trace(State::init_state_on_entry));
-        EXPECT_CALL(mock, trace(Guard::condition1));
+        EXPECT_CALL(mock, trace(Guard::condition2)).Times(2);
         EXPECT_CALL(mock, trace(Guard::condition1));
 
-        // Guard::Condition1 return true, trigger exiting InitState
+        // The Event::Event is received, and state transition is triggered.
         EXPECT_CALL(mock, trace(State::init_state_on_exit));
-        // Action1 is performed
         EXPECT_CALL(mock, trace(Action::action1));
-        // State is transit to NextState
-        EXPECT_CALL(mock, trace(State::next_state_on_entry));
+        EXPECT_CALL(mock, trace(State::working_state_on_entry));
 
-        // Deferred Stop Event is processed
-        EXPECT_CALL(mock, trace(Guard::condition2));
-        // Guard2 return true, and transition to EndState is triggered
-        EXPECT_CALL(mock, trace(Action::action2));
+        // The first Deferred Handle Event is processed
+        EXPECT_CALL(mock, trace(State::spare_state_on_entry));
+        // The second Deferred Handle Event is processed
+        EXPECT_CALL(mock, trace(State::working_state_on_entry));
     }
     StateMachine sut{};
     sut.start();
-    sut.process_event(Event::Stop{});
+    sut.process_event(Event::HandOver{});
+    sut.process_event(Event::HandOver{});
+    EXPECT_EQ(sut.current_state()[0], 0);
+
     sut.process_event(Event::Event{});
-    EXPECT_EQ(*sut.current_state(), 2);
+    EXPECT_EQ(sut.current_state()[0], 1);
+}
+
+TEST_F(DeferEventTest, Condition2ReturnFalse)
+{
+    {
+        ::testing::InSequence s;
+        auto& mock = Tracer::getMocker();
+        EXPECT_CALL(mock, trace(State::init_state_on_entry));
+        EXPECT_CALL(mock, trace(Guard::condition2));
+        EXPECT_CALL(mock, trace(Guard::condition1));
+
+        // The Event::Event is received, and state transition is triggered.
+        EXPECT_CALL(mock, trace(State::init_state_on_exit));
+        EXPECT_CALL(mock, trace(Action::action1));
+        EXPECT_CALL(mock, trace(State::working_state_on_entry));
+        // Due to Guard::Condition2 return false, the Event::HandOver isn't 
+        // saved, so there is State Transit from WorkingState to SpareState
+    }
+    StateMachine sut{};
+    sut.condition2 = false;
+    sut.start();
+    sut.process_event(Event::HandOver{});
+    EXPECT_EQ(sut.current_state()[0], 0);
+
+    sut.process_event(Event::Event{});
+    EXPECT_EQ(sut.current_state()[0], 1);
 }
 }

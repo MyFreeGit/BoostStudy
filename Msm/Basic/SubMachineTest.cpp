@@ -56,7 +56,7 @@ TEST_F(SubMachineTest, Condition2ReturnTrue)
 {
     {
         ::testing::InSequence s;
-        auto& mock = Tracer::TracerProvider::getMocker();
+        auto& mock = Tracer::getMocker();
         EXPECT_CALL(mock, trace(State::init_state_on_entry));
         EXPECT_CALL(mock, trace(State::init_state_on_exit));
         EXPECT_CALL(mock, trace(State::another_state_on_entry));

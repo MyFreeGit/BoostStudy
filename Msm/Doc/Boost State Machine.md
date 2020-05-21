@@ -8,13 +8,40 @@ MSM stand for Meta State Machine
 
 ---
 
-# Basic Idea
+# 用例代码
 - 使用GMock GTest框架，通过UT方式展现Boost MSM的功能
-- 案例主要基于此状态机：
-![](./Images/BasicStateMachine.png)
-
+- 每一个UT Case文件包含一个Boost MSM状态机，使用GTest框架，构建多个Case，用于演示同一状态机的不同特征。
+- 为了减少重复代码和简化状态机的代码，用例中使用的State，Action，Event， Guard都定义在Includes目录下，并用namespace隔开，比如
+```C++
+namespace Event
+{
+struct Event {};
+} // namespace Event
+```
+- 每一个关键函数都使用TraceLib的Trace函数，打印对应的字符串。在UT Case中使用gMock对Trace函数打桩，在Case中检验Trace函数的输入值，用于演示状态机运行时的函数调用流程。
 ---
 
+
+# 用例代码目录结构
+```markdown
+├── Basic                          // 包含主要用例
+│   ├── AnonymousTransitTest.cpp
+│   ├── ...Test.cpp
+│   ├── CMakeLists.txt
+│   ├── Includes                   // 用例所使用到的公共部分
+│   │   ├── Action.hpp
+│   │   ├── Event.hpp
+│   │   ├── Guard.hpp
+│   │   └── State.hpp
+│   └── TracerLib                  // Trace的接口，Mocker用于UT测试
+│       ├── CMakeLists.txt
+│       ├── TracerMocker.cpp
+│       └── TracerMocker.hpp
+└── Doc                            // 文档
+    └── Boost State Machine.md
+```
+
+---
 # Functor
 
 - 重载了（）operator的Class或struct
@@ -51,41 +78,14 @@ ShorterThan shorterThan5{5}, shorterThan9{9};
 
 ---
 
-# Boost MSM 定义状态机
-```C++
-struct StateMachine_ : public msm::front::state_machine_def<StateMachine_>
-{
-    // Entry action For StateMachine
-    template <class Event, class Fsm>
-    void on_entry(Event const&, Fsm&) const
-    {}
-    // Exit action
-    template <class Event, class Fsm>
-    void on_exit(Event const&, Fsm&) const
-    {}
-    // Set initial state
-    typedef State::InitState initial_state;
-    // Transition table
-    struct transition_table
-        : public boost::mpl::vector<
-              // |Start            |Event       |Next
-              Row<State::InitState, Event::Stop, State::EndState>
-    {};
-};
-// Pick a back-end
-typedef msm::back::state_machine<StateMachine_> StateMachine;
-```
-
----
-
 # 状态
 - 用于描述系统在某一特定时间内的状态
 - 一个状态可以包含以个部分：
-    - 状态名 - E状态名称 
+    - 状态名 - 状态名称 
     - Entry Action - 进入状态时执行的动作
     - Exit Action - 离开状态下时执行的操作
     - Defer Event - 在该状态下未处理的事件列表，而是被推迟并排队等待另一个状态的对象处理
-![](https://www.boost.org/doc/libs/1_73_0/libs/msm/doc/images/state.gif)
+![](./Images/SimpleState.png)
 
 ---
 
@@ -97,16 +97,18 @@ struct InitState : public msm::front::state<>
     // Entry action
     template <class Event, class Fsm>
     void on_entry(Event const &, Fsm &) const
-    {
-    }
+    { ... }
+    template <class Fsm>
+    // 争对Inner消息的on_entry函数，在状态机收到Inner消息并进入到InitState时被调用。
+    // 可以在此实现对应某特定消息的处理动作
+    void on_entry(Event::Inner const &, Fsm &) const
+    { ... }
     // Exit action
     template <class Event, class Fsm>
     void on_exit(Event const &, Fsm &) const
-    {
-    }
+    { ... }
 };
 ```
-
 ---
 
 # 消息（事件）
@@ -114,7 +116,7 @@ struct InitState : public msm::front::state<>
 - 消息可以有参数
 - 消息被系统接收后，消息被消耗（consume）
 - 比如对于键盘来说，用户每按下一个键，键盘就接收到一个消息，按键值为该消息的参数。当键盘接收消息后，用户需从新按键，才能再次触发按键消息。
-
+- 在某一特定State下，消息可以被Defer，再推出该状态后，该消息被自动触发。
 ---
 
 # Boost MSM 定义消息
@@ -129,17 +131,17 @@ struct PowerOff {}; // Empty Structure is Okay
 ```
 
 ---
-
+![bg auto right:35%](./Images/StateTranistDetails.png)
 # Transition, Guard, Action
 - 系统在接收到消息后，从当前状态转变到另一个状态。（源状态和目标状态可为同一状态）
 - Transition发生前，系统调用Guard，用于决定是否发生状态转移。
     - 比如汽车发动前，检查刹车状态
 - Guard检查通过后，系统退出当前状态，调用当前状态的exit方法。
-    - 退出驻车状态，如果双跳灯开启的话，关闭双跳灯
+    - 比如退出驻车状态，如果双跳灯开启的话，关闭双跳灯
 - 系统调用Action方法用以响应收到的消息。
-    - 启动发动机，响应启动消息
+    - 比如启动发动机，响应启动消息
 - 系统完成消息响应的Action后，进入目标状态，调用目标状态的entry方法。
-    - 进入行车状态，打开行车灯
+    - 比如进入行车状态，打开行车灯
 
 ---
 
@@ -173,12 +175,13 @@ struct GeneralGuard
     bool operator()(Event const &e, Fsm &, SourceState &, TargetState &)
     {
     }
-    // 根据C++ Template的特性，也可以定义（）operator的specialized版本
+    // 根据C++ Template的特性，也可以定义（）operator的specialized版本，用于响应特定类型的Event
     template <class Fsm, class SourceState, class TargetState>
     bool operator()(Event::Stop const &e, Fsm &, SourceState &, TargetState &)
     {
         return e.readyToStop;
     }
+    // 同样也可以定义对应特定状态，或特定状态机的 Operator() 操作符
 };
 ```
 
@@ -195,6 +198,7 @@ struct Action
     }
 };
 ```
+和Guard一样，也可以定义operator（）的Specialized版本
 
 ---
 
@@ -218,7 +222,7 @@ struct StateMachine_ : public msm::front::state_machine_def<StateMachine_>
         Row  <State::InitState, Event::Stop,     State::EndState,   Action::OnEventStop>
     >{};
 };
-// Pick a back-end 目前MSM的backend只有一种
+// Pick a back-end 
 typedef msm::back::state_machine<StateMachine_> StateMachine;
 ``` 
 
@@ -230,9 +234,11 @@ typedef msm::back::state_machine<StateMachine_> StateMachine;
 typedef msm::back::state_machine<StateMachine_> StateMachine;
 StateMachine machine;
 
-machine.start(); // 启动状态机。 还有一重载版本start(event);
+machine.start(); // 启动状态机。 还有一重载版本start(event); Region
+                 // 如果状态机的on_entry有响应event的specialized的版本，则调用该Specialized版本
 machine.process_event(KeyPressed{60});
-machine.current_state(); // 得到当前状态值，注返回值为int*类型，为一组当前所处的类型（有子状态）。
+machine.current_state(); // 得到当前状态值，注返回值为int*类型，为一组当前所处的类型（如果状态机
+                         // 中有多个Orthogonal Region，则数组有多个状态值）
                          // 状态值有Transition Table中State由上至下的顺序决定其值。
 machine.stop(); // 停止状态机。 还有一重载版本stop(event)
 ```
@@ -258,8 +264,7 @@ struct transition_table : public boost::mpl::vector<
 # Anonymous Transitions
 - 在没有事件触发的情况下，当一个State完成后自动迁移到下一状态。
     - 状态机启动后进入初始状态
-    - 等于UML中的状态图降级为活动图
-    - 可以通过设置Guard，实现条件判断
+    - 可以通过设置Guard，实现条件判断，状态机可以迁徙到不同目标状态
 - 在上例中将触发消息用boost::msm::front::none替代，就将普通State Transit转化为Anonymous Transit
 ```C++
 struct transition_table : public boost::mpl::vector<
@@ -267,7 +272,7 @@ struct transition_table : public boost::mpl::vector<
     Row<InitState, msm::front::none, AnotherState,  Action2, Condition2>
 >{};
 ```
-- 上述Transit Table中的Action和Guard也可删除或为none。则状态自动迁移，匹配规则同样自下而上。
+- 上述Transit Table中的Action和Guard也可删除或为none。则状态自动迁移，匹配规则顺序同样自下而上。
 
 ---
 
@@ -297,7 +302,8 @@ Submachine直接定义在State Machine内，Boost MSM会自动将消息派送到
 ```C++
 StateMachine sut;
 sut.start();
-sut.process_event(Event::Event{}); sut.process_event(Event::Inner{});
+sut.process_event(Event::Event{}); 
+sut.process_event(Event::Inner{});
 ```
 
 ---
@@ -349,4 +355,26 @@ sut.start();
 sut.process_event(Event::Stop{}); // Event is deferred at first
 sut.process_event(Event::Event{}); 
 ```
-通过Guard可以决定，是否在当前状态下保存收到的Event
+- 通过Guard可以决定，是否在当前状态下保存收到的Event
+- 状态机可以保存多条消息
+
+---
+![bg auto right:25%](./Images/AnonymousState.png)
+# Anonymous State
+- 某一个State不响应任何消息，自动转移到下一状态，该状态为Anonymous State。
+```C++
+struct StateMachine_ : public msm::front::state_machine_def<StateMachine_>
+{
+    typedef State::InitState initial_state;
+    // Transition table
+    struct transition_table : public boost::mpl::vector<
+        // |Start             |Event            |Next
+        Row<State::InitState, msm::front::none, State::NextState>,
+        Row<State::NextState, Event::Stop,      State::EndState>
+    >{};
+};
+// Pick a back-end
+typedef msm::back::state_machine<StateMachine_> StateMachine;
+```
+- Row<State::InitState, msm::front::none, State::NextState>将InitState设置为Anonymous State
+- Anonymous State的优先级最高。

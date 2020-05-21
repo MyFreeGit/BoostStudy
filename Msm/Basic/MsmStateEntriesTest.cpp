@@ -63,7 +63,7 @@ TEST_F(MsmStateEntriesTest, StateTransit)
 {
     {
         ::testing::InSequence s;
-        auto& mock = Tracer::TracerProvider::getMocker();
+        auto& mock = Tracer::getMocker();
         EXPECT_CALL(mock, trace("state_machine_on_entry"));
         EXPECT_CALL(mock, trace(State::init_state_on_entry));
         EXPECT_CALL(mock, trace(State::init_state_on_exit));
@@ -71,9 +71,9 @@ TEST_F(MsmStateEntriesTest, StateTransit)
     }
     StateMachine sut{};
     sut.start();
-    EXPECT_EQ(*sut.current_state(), 0);
+    EXPECT_EQ(sut.current_state()[0], 0);
     sut.process_event(Event::Stop());
-    EXPECT_EQ(*sut.current_state(), 1);
+    EXPECT_EQ(sut.current_state()[0], 1);
     sut.stop(); // Trigger the StateMachine's on_exit function
 }
 
@@ -81,7 +81,7 @@ TEST_F(MsmStateEntriesTest, StateTransitBack)
 {
     {
         ::testing::InSequence s;
-        auto& mock = Tracer::TracerProvider::getMocker();
+        auto& mock = Tracer::getMocker();
         EXPECT_CALL(mock, trace("state_machine_on_entry"));
         EXPECT_CALL(mock, trace(State::init_state_on_entry));
         EXPECT_CALL(mock, trace(State::init_state_on_exit)); // on_exit() is called when handling the event message.
@@ -91,24 +91,24 @@ TEST_F(MsmStateEntriesTest, StateTransitBack)
     }
     StateMachine sut{};
     sut.start();
-    EXPECT_EQ(*sut.current_state(), 0);
+    EXPECT_EQ(sut.current_state()[0], 0);
     sut.process_event(Event::Loopback());
-    EXPECT_EQ(*sut.current_state(), 0);
+    EXPECT_EQ(sut.current_state()[0], 0);
 }
 
 TEST_F(MsmStateEntriesTest, InnerStateTransit)
 {
     {
         ::testing::InSequence s;
-        auto& mock = Tracer::TracerProvider::getMocker();
+        auto& mock = Tracer::getMocker();
         EXPECT_CALL(mock, trace("state_machine_on_entry"));
         EXPECT_CALL(mock, trace(State::init_state_on_entry)); 
         // No state transist is triggersed, so there is no on_exit and next on_entry is called.
     }
     StateMachine sut{};
     sut.start();
-    EXPECT_EQ(*sut.current_state(), 0);
+    EXPECT_EQ(sut.current_state()[0], 0);
     sut.process_event(Event::Inner());
-    EXPECT_EQ(*sut.current_state(), 0);
+    EXPECT_EQ(sut.current_state()[0], 0);
 }
 } // namespace

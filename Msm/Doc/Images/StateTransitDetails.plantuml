@@ -1,0 +1,13 @@
+@startuml
+:状态机接受到消息;
+:在Transit Table中找到对应条目;
+if (调用Guard校验) then (true)
+:调用当前状态的on_exit
+函数并退出当前状态;
+:运行Action;
+:调用目标状态的on_entry
+函数并进入目标状态;
+else (false)
+:不做任何处理，保持当前状态;
+endif
+@enduml

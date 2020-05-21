@@ -50,7 +50,7 @@ TEST_F(MsmActionTest, StateTransitWithFunctionEventHandler)
 {
     {
         ::testing::InSequence s;
-        auto& mock = Tracer::TracerProvider::getMocker();
+        auto& mock = Tracer::getMocker();
         EXPECT_CALL(mock, trace(State::init_state_on_entry));
         EXPECT_CALL(mock, trace(State::init_state_on_exit)); // on_exit() is called before handling the event message.
         EXPECT_CALL(mock, trace("handle_loopback"));
@@ -58,39 +58,39 @@ TEST_F(MsmActionTest, StateTransitWithFunctionEventHandler)
     }
     StateMachine sut{};
     sut.start();
-    EXPECT_EQ(*sut.current_state(), 0);
+    EXPECT_EQ(sut.current_state()[0], 0);
     sut.process_event(Event::Loopback());
-    EXPECT_EQ(*sut.current_state(), 0);
+    EXPECT_EQ(sut.current_state()[0], 0);
 }
 
 TEST_F(MsmActionTest, StateTransitWithFunctorHandler)
 {
     {
         ::testing::InSequence s;
-        auto& mock = Tracer::TracerProvider::getMocker();
+        auto& mock = Tracer::getMocker();
         EXPECT_CALL(mock, trace(State::init_state_on_entry));
         EXPECT_CALL(mock, trace(State::init_state_on_exit)); // on_exit() is called before handling the event message.
         EXPECT_CALL(mock, trace(Action::on_event_stop));
     }
     StateMachine sut{};
     sut.start();
-    EXPECT_EQ(*sut.current_state(), 0);
+    EXPECT_EQ(sut.current_state()[0], 0);
     sut.process_event(Event::Stop());
-    EXPECT_EQ(*sut.current_state(), 1);
+    EXPECT_EQ(sut.current_state()[0], 1);
 }
 
 TEST_F(MsmActionTest, InnerStateTransitWithFunctorHandler)
 {
     {
         ::testing::InSequence s;
-        auto& mock = Tracer::TracerProvider::getMocker();
+        auto& mock = Tracer::getMocker();
         EXPECT_CALL(mock, trace(State::init_state_on_entry));
         EXPECT_CALL(mock, trace(Action::on_event_inner));
     }
     StateMachine sut{};
     sut.start();
-    EXPECT_EQ(*sut.current_state(), 0);
+    EXPECT_EQ(sut.current_state()[0], 0);
     sut.process_event(Event::Inner());
-    EXPECT_EQ(*sut.current_state(), 0);
+    EXPECT_EQ(sut.current_state()[0], 0);
 }
 }
